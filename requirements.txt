@@ -1,0 +1,9 @@
+pymongo
+black
+pylint
+pytest
+pytest-cov
+pytest-mock
+flask
+flask-pymongo
+pytest-flask
