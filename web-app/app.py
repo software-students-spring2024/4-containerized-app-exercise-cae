@@ -2,7 +2,7 @@
 Module docstring goes here.
 """
 
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask
 from pymongo import MongoClient
 
 app = Flask(__name__)
