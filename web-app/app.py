@@ -2,11 +2,26 @@
 Module docstring goes here.
 """
 
+import os
 from flask import Flask
 from pymongo import MongoClient
 
+# Initialize Flask application
 app = Flask(__name__)
 
-client = MongoClient('mongodb+srv://zc1545:200893356azxsd@cluster0.fy1j2yw.mongodb.net/CAE')
+def get_mongo_client():
+    """
+    Establishes a connection to MongoDB and returns a MongoClient object.
+    """
+    mongo_uri = os.getenv("MONGODB_URI")
+    if not mongo_uri:
+        raise ValueError("MongoDB URI not found in environment variables.")
+    return MongoClient(mongo_uri)
 
-db = client['CAE']
+# Connect to MongoDB
+try:
+    client = get_mongo_client()
+    db = client.get_database()  # Replace with your database name if different
+    print("Connected to MongoDB successfully.")
+except Exception as e:
+    print("Error connecting to MongoDB:", e)
