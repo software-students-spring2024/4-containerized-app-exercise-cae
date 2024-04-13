@@ -1,6 +1,5 @@
-"
-Module docstring goes here.
-"""
+
+#Module docstring goes here.
 import os
 from flask import Flask
 from pymongo import MongoClient
