@@ -1,6 +1,3 @@
-
-
-
 #Module docstring goes here.
 """
 This module initializes a Flask application and connects to a MongoDB database.
