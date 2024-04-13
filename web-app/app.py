@@ -1,5 +1,8 @@
 
 #Module docstring goes here.
+"""
+This module initializes a Flask application and connects to a MongoDB database.
+"""
 import os
 from flask import Flask
 from pymongo import MongoClient
