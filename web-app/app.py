@@ -3,7 +3,7 @@
 import os
 from flask import Flask
 from pymongo import MongoClient
-from pymongo.errors import ConnectionError
+from pymongo.errors import ConnectionError as MongoDBConnectionError
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -22,7 +22,7 @@ try:
     client = get_mongo_client()
     db = client.get_database()  # Replace with your database name if different
     print("Connected to MongoDB successfully.")
-except ConnectionError as e:
+except MongoDBConnectionError as e:
     print("Error connecting to MongoDB:", e)
 except ValueError as e:
     print("MongoDB URI not found:", e)
