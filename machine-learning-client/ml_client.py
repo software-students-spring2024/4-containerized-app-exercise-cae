@@ -5,7 +5,7 @@ extract its color palette, then store the palette data inside the database.
 
 import os
 from pymongo import MongoClient
-from cv2 import cv2
+import cv2
 import numpy as np
 
 
