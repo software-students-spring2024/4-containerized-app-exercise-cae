@@ -31,13 +31,15 @@ def get_mongo_client():
 
 # Function to get the database
 def get_db(client):
-    db_name = os.getenv("MONGO_DB_NAME", "ml_data")
+    db_name = os.getenv("MONGO_DB_NAME", "CAE")
     return client[db_name]
 
 # Connect to MongoDB
 try:
     client = get_mongo_client()
     db = get_db(client)
+    collection_name = "CAE-Data"
+    collection = db[collection_name]
     print("Connected to MongoDB successfully.")
 except ConnectionError as e:
     print("Error connecting to MongoDB:", e)
@@ -69,7 +71,7 @@ def upload_image():
     os.remove(image_path)
 
     # insert color data into db
-    db.colors.insert_one(color_data)
+    db.collection_name.insert_one(color_data)
 
     return jsonify(color_data), 201
 
@@ -78,7 +80,7 @@ def upload_image():
 def add_color_data():
     try:
         color_data = request.json
-        result = db.colors.insert_one(color_data)
+        result = db.collection_name.insert_one(color_data)
         return jsonify(message="Color data added", id=str(result.inserted_id)), 201
     except Exception as e:
         return jsonify(error=str(e)), 500
@@ -87,7 +89,7 @@ def add_color_data():
 @app.route('/colors', methods=['GET'])
 def get_all_colors():
     try:
-        colors = list(db.colors.find({}, {'_id': 0}))
+        colors = list(db.collection_name.find({}, {'_id': 0}))
         return dumps(colors), 200
     except Exception as e:
         return jsonify(error=str(e)), 500
@@ -96,7 +98,7 @@ def get_all_colors():
 @app.route('/color/<name>', methods=['GET'])
 def get_color_by_name(name):
     try:
-        color = db.colors.find_one({'name': name}, {'_id: 0'})
+        color = db.collection_name.find_one({'name': name}, {'_id: 0'})
         if color:
             return dumps(color), 200
         else:
