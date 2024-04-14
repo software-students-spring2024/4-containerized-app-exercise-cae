@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Capture Image</title>
+</head>
+<body>
+    <h1>Image Capture for Color Analysis</h1>
+    <button id="capture-btn">Capture Image</button>
+    <script>
+        document.getElementById('capture-btn').addEventListener('click', function() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.play();
+                    setTimeout(() => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        canvas.getContext('2d').drawImage(video, 0, 0);
+                        video.srcObject.getTracks().forEach(track => track.stop()); // Stop the camera
+                        canvas.toBlob(blob => {
+                            const formData = new FormData();
+                            formData.append('image', blob);
+                            fetch('/capture', {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log(data); // Handle the response data
+                            })
+                            .catch(error => {
+                                console.error(error);
+                            });
+                        }, 'image/jpeg');
+                    }, 5000); // Take picture 5 seconds after opening camera
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+        });
+    </script>
+</body>
+</html>

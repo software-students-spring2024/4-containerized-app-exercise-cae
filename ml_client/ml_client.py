@@ -16,6 +16,15 @@ def capture_image():
     cap.release()
     return frame
 
+# Added method to process image file and return color data
+def analyze_image(image_file):
+    image = cv2.imdecode(np.fromstring(image_file.read(), np.uint8), cv2.IMREAD_UNCHANGED)
+    color_palette = extract_color_palette(image)
+    # enhance functionality later to include name, RGB, and HEX values
+    color_data = {"color_palette": color_palette}
+    store_color_data(color_data)
+    return color_data
+
 
 def extract_color_palette(image):
     """This function extracts the average color palette of the captured image when called."""
