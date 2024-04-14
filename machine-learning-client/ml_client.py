@@ -1,32 +1,48 @@
-import cv2
-import pymongo
-import numpy as np 
+"""
+This module initializes the ML client that will analyze the image captured by the user via app.py, 
+extract its color palette, then store the palette data inside the database.
+"""
 
-class mlClient:
-    def __init__(self, db_url, db_name):
-        self.db_client = pymongo.MongoClient(db_url)
-        self.db = self.db_client[db_name]
+import os
+from pymongo import MongoClient
+from cv2 import cv2
+import numpy as np
 
-    def capture_color(self):
-        # captures frames from camera, processes them, detects colors using 'detect_color' method, and saves color information to database using 'save_color'
 
-    def detect_color(self, frame):
-        # implement color detection algo, we can calculate the average color of a captured frame
+def capture_image():
+    """This function captures an image via the user's camera when called."""
+    cap = cv2.VideoCapture(0)
+    frame = cap.read()
+    cap.release()
+    return frame
 
-        # calculate avg color
-        avg_color_per_row = np.average(frame, axis=0)
-        avg_color = np.average(avg_color_per_row, axis=0)
 
-        return avg_color
-    
-    def save_color(self, color):
-        color_data = {
-            'red': color[0],
-            'green': color[1],
-            'blue': color[2]
-        }
-        self.db.colors.insert_one(color_data)
+def extract_color_palette(image):
+    """This function extracts the average color palette of the captured image when called."""
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    pixels = image_rgb.reshape(-1, 3)
+    average_color = np.mean(pixels, axis=0)
+    return average_color.tolist()
+
+
+def store_color_data(color_data):
+    """This function stores the color palette data into the database when called."""
+    mongo_uri = os.getenv("MONGO_URI")
+    if not mongo_uri:
+        print("Error: MONGO_URI environment variable is not set.")
+        return
+    client = MongoClient(mongo_uri)
+    db_client = client["CAE"]
+    collection = db_client["CAE-Data"]
+    collection.insert_one(color_data)
+
+
+def main():
+    """This is the main function of the client."""
+    image = capture_image()
+    color_palette = extract_color_palette(image)
+    store_color_data({"color_palette": color_palette})
+
 
 if __name__ == "__main__":
-    # configure db_url, db_name
-    # initialize ML client and capture color from camera
+    main()
