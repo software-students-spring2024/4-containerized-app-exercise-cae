@@ -1,143 +1,57 @@
-#Module docstring goes here.
 """
-This module initializes a Flask application and connects to a MongoDB database.
+This module initializes the ML client that will analyze the image captured by the user via app.py, 
+extract its color palette, then store the palette data inside the database.
 """
+
 import os
-import sys 
-from bson import json_util
-from flask import Flask, request, jsonify, render_template, redirect, url_for
-from werkzeug.utils import secure_filename
-from bson.json_util import dumps
-from dotenv import load_dotenv
 from pymongo import MongoClient
-import certifi
+import cv2
+import numpy as np
 
-sys.path.append('../machine-learning-client')
-from ml_client import analyze_image
 
-load_dotenv()
-
-# Initialize Flask application
-app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads'
-
-def get_mongo_client():
-    """
-    Establishes a connection to MongoDB and returns a MongoClient object.
-    """
-    mongo_uri = os.getenv("MONGODB_URI")
-    if not mongo_uri:
-        raise ValueError("MongoDB URI not found in environment variables.")
-    return MongoClient(mongo_uri, tlsCAFile=certifi.where())
-
-    # mongo_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017/ml_data")
-    # return MongoClient(mongo_uri)
-
-# Function to get the database
-def get_db(client):
-    db_name = os.getenv("MONGO_DB_NAME", "CAE")
-    return client[db_name]
-
-# Connect to MongoDB
-try:
-    client = get_mongo_client()
-    db = get_db(client)
-    collection = db["CAE-Data"]
-    print("Connected to MongoDB successfully.")
-except ConnectionError as e:
-    print("Error connecting to MongoDB:", e)
-    exit(1)
-
-# Define routes and other Flask application logic below
-@app.route('/')
-def home():
-    return render_template('index.html')
-
-# Route to capture image using camera
-@app.route('/capture', methods=['POST'])
 def capture_image():
-    if 'image' not in request.files:
-        return jsonify({'error': "No image part"}), 400
+    """This function captures an image via the user's camera when called."""
+    cap = cv2.VideoCapture(0)
+    frame = cap.read()
+    cap.release()
+    return frame
 
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+# Added method to process image file and return color data
+def analyze_image(image_file):
+    image = cv2.imdecode(np.fromstring(image_file.read(), np.uint8), cv2.IMREAD_UNCHANGED)
+    color_palette = extract_color_palette(image)
+    # enhance functionality later to include name, RGB, and HEX values
+    color_data = {"color_palette": color_palette}
+    store_color_data(color_data)
+    return color_data
 
-    filename = secure_filename(file.filename)
-    image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(image_path)
 
-    try:
-        color_data = analyze_image(image_path)
-        return render_template('color_display.html', color_data=color_data)
-    finally:
-        if os.path.exists(image_path):
-            os.remove(image_path)
+def extract_color_palette(image):
+    """This function extracts the average color palette of the captured image when called."""
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    pixels = image_rgb.reshape(-1, 3)
+    average_color = np.mean(pixels, axis=0)
+    return average_color.tolist()
 
-# Route to display colors
-def color_display():
-    color_data = request.args.get('color_data', {})
-    return render_template('color_display.html', color_data=color_data)
 
-# Route to upload image to db
-@app.route('/upload', methods=['POST'])
-def upload_image():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image part'}), 400
-
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    # secure filename and save in uploads folder
-    filename = secure_filename(file.filename)
-    image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(image_path)
-
-    # call analyze_image function from ml_client.py
-    color_data = analyze_image(image_path)
-
-    # remove image after analysis if not required to keep
-    os.remove(image_path)
-
-    # insert color data into db
+def store_color_data(color_data):
+    """This function stores the color palette data into the database when called."""
+    mongo_uri = os.getenv("MONGO_URI")
+    if not mongo_uri:
+        print("Error: MONGO_URI environment variable is not set.")
+        return
+    client = MongoClient(mongo_uri)
+    db_client = client["CAE"]
+    collection = db_client["CAE-Data"]
     collection.insert_one(color_data)
 
-    return jsonify(color_data), 201
 
-# Route to add new color data
-@app.route('/color', methods=['POST'])
-def add_color_data():
-    try:
-        color_data = request.json
-        result = collection.insert_one(color_data)
-        return jsonify(message="Color data added", id=str(result.inserted_id)), 201
-    except Exception as e:
-        return jsonify(error=str(e)), 500
+def main():
+    """This is the main function of the client."""
+    image = capture_image()
+    color_palette = extract_color_palette(image)
+    store_color_data({"color_palette": color_palette})
 
-# Route to retrieve all color data
-@app.route('/colors', methods=['GET'])
-def get_all_colors():
-    try:
-        colors = list(collection.find({}, {'_id': 0}))
-        return dumps(colors), 200
-    except Exception as e:
-        return jsonify(error=str(e)), 500
 
-# Route to retrieve a specific color by name
-@app.route('/color/<name>', methods=['GET'])
-def get_color_by_name(name):
-    try:
-        color = collection.find_one({'name': name}, {'_id: 0'})
-        if color:
-            return dumps(color), 200
-        else:
-            return jsonify(message="Color not found"), 404
-    except Exception as e:
-        return jsonify(error=str(e)), 500
-
-if __name__ == '__main__':
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
-
-    app.run(debug=True, host='0.0.0.0', port=5001)
+if __name__ == "__main__":
+    main()
