@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Color Information</title>
+    <style>
+        .color-box {
+            width: 100px;
+            height: 100px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Detected Color Information</h1>
+    {% if color_data %}
+        <div class="color-box" style="background-color: {{ color_data['hex'] }}"></div>
+        <p><strong>Color Name:</strong> {{ color_data['name'] }}</p>
+        <p><strong>RGB Values:</strong> {{ color_data['rgb'] }}</p>
+        <p><strong>HEX Code:</strong> {{ color_data['hex'] }}</p>
+    {% else %}
+        <p>No color data available.</p>
+    {% endif %}
+    <a href="{{ url_for('home') }}">Back to Home</a>
+</body>
+</html>
