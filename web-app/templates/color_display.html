@@ -4,20 +4,29 @@
     <meta charset="UTF-8">
     <title>Color Information</title>
     <style>
+        .color-info {
+            margin-bottom: 20px;
+        }
         .color-box {
             width: 100px;
             height: 100px;
-            margin: 20px 0;
+            margin-bottom: 10px;
+        }
+        .color-text {
+            font-size: 18px;
+            margin-bottom: 5px;
         }
     </style>
 </head>
 <body>
     <h1>Detected Color Information</h1>
-    {% if color_data %}
-        <div class="color-box" style="background-color: {{ color_data['hex'] }}"></div>
-        <p><strong>Color Name:</strong> {{ color_data['name'] }}</p>
-        <p><strong>RGB Values:</strong> {{ color_data['rgb'] }}</p>
-        <p><strong>HEX Code:</strong> {{ color_data['hex'] }}</p>
+    {% if COLOR_DATA %}
+        <div class="color-info">
+            <div class="color-box" style="background-color: {{ COLOR_DATA.hex }}"></div>
+            <p class="color-text"><strong>Color Name:</strong> {{ COLOR_DATA.name }}</p>
+            <p class="color-text"><strong>RGB Values:</strong> {{ COLOR_DATA.rgb }}</p>
+            <p class="color-text"><strong>HEX Code:</strong> {{ COLOR_DATA.hex }}</p>
+        </div>
     {% else %}
         <p>No color data available.</p>
     {% endif %}

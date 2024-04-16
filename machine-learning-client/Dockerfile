@@ -1,9 +1,28 @@
-FROM python:3.8-slim
+# Use the official Python image from the Docker Hub
+FROM python:3.9-slim
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory in the container
 WORKDIR /app
 
-RUN pip install pymongo opencv-python-headless numpy
+# Copy the requirements file into the container at /app
+COPY requirements.txt /app/
 
-COPY ml_client.py .
+# Install dependencies
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
+# Copy the current directory contents into the container at /app
+COPY . /app/
+
+# Command to run the ML client
 CMD ["python", "ml_client.py"]
