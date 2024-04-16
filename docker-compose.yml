@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  mongodb:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - cae_network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # AMQP port
+      - "15672:15672"  # RabbitMQ management UI port
+    networks:
+      - cae_network
+
+  webapp:
+    build:
+      context: ./web-app
+      dockerfile: Dockerfile
+    container_name: webapp
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - cae_network
+    environment:
+      MONGODB_URI: "mongodb://mongodb:27017/"
+
+  mlclient:
+    build:
+      context: ./machine-learning-client
+      dockerfile: Dockerfile
+    container_name: mlclient
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - cae_network
+    environment:
+      MONGODB_URI: "mongodb://mongodb:27017/"
+
+networks:
+  cae_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local

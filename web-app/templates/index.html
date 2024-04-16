@@ -5,41 +5,73 @@
     <title>Capture Image</title>
 </head>
 <body>
-    <h1>Image Capture for Color Analysis</h1>
+    <h1>Image Capture</h1>
+    <div id="status"></div>
     <button id="capture-btn">Capture Image</button>
+    <canvas id="canvas" style="display: none;"></canvas>
     <script>
-        document.getElementById('capture-btn').addEventListener('click', function() {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => {
-                    const video = document.createElement('video');
-                    video.srcObject = stream;
-                    video.play();
-                    setTimeout(() => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        canvas.getContext('2d').drawImage(video, 0, 0);
-                        video.srcObject.getTracks().forEach(track => track.stop()); // Stop the camera
-                        canvas.toBlob(blob => {
-                            const formData = new FormData();
-                            formData.append('image', blob);
-                            fetch('/capture', {
-                                method: 'POST',
-                                body: formData
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                console.log(data); // Handle the response data
-                            })
-                            .catch(error => {
-                                console.error(error);
-                            });
-                        }, 'image/jpeg');
-                    }, 5000); // Take picture 5 seconds after opening camera
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusElement = document.getElementById('status');
+            const canvas = document.getElementById('canvas');
+            const captureButton = document.getElementById('capture-btn');
+
+            captureButton.addEventListener('click', function() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    // If getUserMedia is not supported, create a blank white image
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 640; // Set canvas width
+                    canvas.height = 480; // Set canvas height
+                    ctx.fillStyle = '#ffffff'; // Fill canvas with white color
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(blob => {
+                        sendData(blob);
+                    }, 'image/jpeg');
+                    statusElement.innerText = 'Camera not available. Capturing a blank white image instead.';
+                } else {
+                    // Use camera to capture image
+                    navigator.mediaDevices.getUserMedia({ video: true })
+                        .then(stream => {
+                            const video = document.createElement('video');
+                            video.srcObject = stream;
+                            video.play();
+                            setTimeout(() => {
+                                const ctx = canvas.getContext('2d');
+                                canvas.width = video.videoWidth;
+                                canvas.height = video.videoHeight;
+                                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                                video.srcObject.getTracks().forEach(track => track.stop()); // Stop the camera
+                                canvas.toBlob(blob => {
+                                    sendData(blob);
+                                }, 'image/jpeg');
+                                statusElement.innerText = 'Image captured.';
+                                // Redirect to color_display.html after 3 seconds
+                                setTimeout(() => {
+                                    window.location.href = '/color_display';
+                                }, 3000);
+                            }, 1000); // Take picture 1 second after opening camera
+                        })
+                        .catch(error => {
+                            console.error(error);
+                            statusElement.innerText = 'Failed to capture image.';
+                        });
+                }
+            });
+
+            function sendData(blob) {
+                const formData = new FormData();
+                formData.append('image', blob);
+                fetch('/capture', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data); // Handle the response data
                 })
                 .catch(error => {
                     console.error(error);
                 });
+            }
         });
     </script>
 </body>

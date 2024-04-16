@@ -1,110 +1,165 @@
-#Module docstring goes here.
 """
 This module initializes a Flask application and connects to a MongoDB database.
 """
-from ml_client.ml_client import analyze_image # this function must be updated accordingly in ml_client.py
-from flask import Flask, request, jsonify, render_template
-from werkzeug.utils import secure_filename
-import os
-from bson.json_util import dumps
-from dotenv import load_dotenv
-from pymongo import MongoClient
 
+from flask import Flask, request, jsonify, render_template
+import os
+from pymongo import MongoClient
+from dotenv import load_dotenv
+import pika
+import logging
+from bson import ObjectId
 
 load_dotenv()
 
-# Initialize Flask application
-app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads'
+app = Flask(__name__, template_folder="templates")
+app.config["UPLOAD_FOLDER"] = "uploads"
 
+counter = 0
+
+
+def generate_filename():
+    global counter
+    counter += 1
+    return f"image_{counter}.jpg"
+
+
+# Initialize the MongoDB client
 def get_mongo_client():
-    """
-    Establishes a connection to MongoDB and returns a MongoClient object.
-    """
-    mongo_uri = os.getenv("MONGODB_URI")
+    mongo_uri = "mongodb://mongodb:27017/"
+    # mongo_uri = "mongodb://localhost:27017/"
     if not mongo_uri:
         raise ValueError("MongoDB URI not found in environment variables.")
     return MongoClient(mongo_uri)
 
-    # mongo_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017/ml_data")
-    # return MongoClient(mongo_uri)
 
 # Function to get the database
 def get_db(client):
-    db_name = os.getenv("MONGO_DB_NAME", "CAE")
+    db_name = "CAE"
     return client[db_name]
+
 
 # Connect to MongoDB
 try:
-    client = get_mongo_client()
-    db = get_db(client)
-    collection_name = "CAE-Data"
-    collection = db[collection_name]
+    mongo_client = get_mongo_client()
+    db = get_db(mongo_client)
+    image_collection = db["Image"]
+    color_collection = db["Color"]
     print("Connected to MongoDB successfully.")
 except ConnectionError as e:
     print("Error connecting to MongoDB:", e)
     exit(1)
 
+
 # Define routes and other Flask application logic below
-@app.route('/')
+@app.route("/")
 def home():
-    return render_template('index.html')
+    return render_template("index.html")
 
-# Route to upload image to db
-def upload_image():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image part'}), 400
 
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+@app.route("/capture", methods=["POST"])
+def capture():
+    if "image" not in request.files:
+        return jsonify({"error": "No image part"}), 400
 
-    # secure filename and save in uploads folder
-    filename = secure_filename(file.filename)
-    image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file = request.files["image"]
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
+
+    # Generate a filename
+    filename = generate_filename()
+    image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    print(image_path)
+
+    # Save the image to the uploads folder
     file.save(image_path)
 
-    # call analyze_image function from ml_client.py
-    color_data = analyze_image(image_path)
+    # Save image filename to database
+    document_id = save_image_to_db(image_path)
 
-    # remove image after analysis if not required to keep
-    os.remove(image_path)
+    # Initialize the message broker connection
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
+    channel = connection.channel()
 
-    # insert color data into db
-    db.collection_name.insert_one(color_data)
+    # Declare a queue for sending messages to ml_client.py
+    channel.queue_declare(queue="main")
 
-    return jsonify(color_data), 201
+    # Declare a queue for receiving messages from ml_client.py
+    channel.queue_declare(queue="ml_client")
 
-# Route to add new color data
-@app.route('/color', methods=['POST'])
-def add_color_data():
+    # Publish a message to the message broker
+    channel.basic_publish(exchange="", routing_key="ml_client", body=document_id)
+
+    # Define a callback function to process incoming messages
+    channel.basic_consume(queue="main", on_message_callback=callback, auto_ack=True)
+
+    # Start consuming messages from the queue
+    print("Waiting for messages...")
+    channel.start_consuming()
+
+    return (
+        jsonify(
+            message="Image saved to database and analysis triggered",
+            document_id=document_id,
+        ),
+        201,
+    )
+
+
+color_data = None
+
+
+@app.route("/color_display")
+def color_display():
+    if color_data is None:
+        return render_template("color_display.html", color_data=None)
+    else:
+        return render_template("color_display.html", color_data=color_data)
+
+
+logging.basicConfig(level=logging.DEBUG)
+
+
+def save_image_to_db(image_path):
     try:
-        color_data = request.json
-        result = db.collection_name.insert_one(color_data)
-        return jsonify(message="Color data added", id=str(result.inserted_id)), 201
+        with open(image_path, "rb") as image_file:
+            image_data = image_file.read()
+        data = {"image_data": image_data}
+        result = image_collection.insert_one(data)
+        document_id = str(result.inserted_id)
+        logging.debug(f"Image inserted into database with document ID: {document_id}")
+        return str(result.inserted_id)
     except Exception as e:
-        return jsonify(error=str(e)), 500
+        logging.error(f"Error inserting image into database: {e}")
+        return None
 
-# Route to retrieve all color data
-@app.route('/colors', methods=['GET'])
-def get_all_colors():
-    try:
-        colors = list(db.collection_name.find({}, {'_id': 0}))
-        return dumps(colors), 200
-    except Exception as e:
-        return jsonify(error=str(e)), 500
 
-# Route to retrieve a specific color by name
-@app.route('/color/<name>', methods=['GET'])
-def get_color_by_name(name):
-    try:
-        color = db.collection_name.find_one({'name': name}, {'_id: 0'})
-        if color:
-            return dumps(color), 200
-        else:
-            return jsonify(message="Color not found"), 404
-    except Exception as e:
-        return jsonify(error=str(e)), 500
+def get_color_data_from_db(color_id):
+    """This function retrieves color data from the MongoDB database."""
+    # Connect to MongoDB and fetch image data
+    mongo_uri = "mongodb://mongodb:27017/"
+    # mongo_uri = "mongodb://localhost:27017/"
+    if not mongo_uri:
+        raise EnvironmentError("MONGO_URI environment variable is not set.")
+    client = MongoClient(mongo_uri)
+    db_client = client["CAE"]
+    color_collection = db_client["Color"]
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    document = color_collection.find_one({"_id": ObjectId(color_id)})
+    if document:
+        return document
+    return None
+
+
+def callback(ch, method, properties, body):
+    """This function is called when a message is received from the queue."""
+    global color_data
+    color_id = body.decode()  # Decode the byte message to string
+    print("Received message:", color_id)
+
+    # Fetch image data from the database
+    color_data = get_color_data_from_db(color_id)
+
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
