@@ -2,6 +2,8 @@
 This module initializes the main Flask web app.
 """
 
+# pylint: disable=global-statement
+
 import os
 import logging
 import sys
@@ -155,7 +157,7 @@ def get_color_data_from_db(color_id):
     return None
 
 
-def callback(channel, method, properties, body):
+def callback(channel, method, properties, body):  # pylint: disable=unused-argument
     """This function is called when a message is received from the queue."""
     color_id = body.decode()  # Decode the byte message to string
     print("Received message:", color_id)

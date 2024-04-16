@@ -2,6 +2,9 @@
 This module initializes the machine learning client.
 """
 
+# pylint: disable=no-member
+# pylint: disable=too-many-function-args
+
 import time
 import cv2
 import numpy as np
@@ -66,6 +69,7 @@ def save_color_data_to_db(channel, color_data):
     # Save color data to the database
     result = color_collection.insert_one(color_data)
     color_id = str(result.inserted_id)
+    print(color_id)
 
     # Declare a queue for sending messages to main
     channel.queue_declare(queue="main")
@@ -76,7 +80,7 @@ def save_color_data_to_db(channel, color_data):
     print("Color data saved to the database")
 
 
-def callback(channel, method, properties, body):
+def callback(channel, method, properties, body):  # pylint: disable=unused-argument
     """This function is called when a message is received from the queue."""
     document_id = body.decode()  # Decode the byte message to string
     print("Received message:", document_id)

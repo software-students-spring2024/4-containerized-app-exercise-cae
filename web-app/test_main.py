@@ -2,6 +2,8 @@
 This module initializes the pytest test cases for main.py web app.
 """
 
+# pylint: disable=redefined-outer-name
+
 import tempfile
 from unittest.mock import patch, MagicMock
 import pytest
