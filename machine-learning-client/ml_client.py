@@ -4,6 +4,7 @@ This module initializes the machine learning client.
 
 # pylint: disable=no-member
 # pylint: disable=too-many-function-args
+# pylint: disable=redefined-outer-name
 
 import time
 import cv2
