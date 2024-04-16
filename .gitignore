@@ -147,3 +147,37 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Exclude third-party libraries and dependencies
+
+# Flask dependencies
+/flask/
+/werkzeug/
+/jinja2/
+/itsdangerous/
+
+# PyMongo dependencies
+/bson/
+
+# OpenCV dependencies
+/cv2/
+
+# NumPy dependencies
+/numpy/
+
+# Webcolors dependencies
+/webcolors/
+
+# Pytest dependencies
+/pytest/
+
+# Exclude compiled Python files and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Exclude virtual environments
+.venv/
+venv/
+ENV/
+env/
