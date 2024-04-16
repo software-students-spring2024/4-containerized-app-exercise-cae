@@ -20,12 +20,12 @@
 </head>
 <body>
     <h1>Detected Color Information</h1>
-    {% if color_data %}
+    {% if COLOR_DATA %}
         <div class="color-info">
-            <div class="color-box" style="background-color: {{ color_data.hex }}"></div>
-            <p class="color-text"><strong>Color Name:</strong> {{ color_data.name }}</p>
-            <p class="color-text"><strong>RGB Values:</strong> {{ color_data.rgb }}</p>
-            <p class="color-text"><strong>HEX Code:</strong> {{ color_data.hex }}</p>
+            <div class="color-box" style="background-color: {{ COLOR_DATA.hex }}"></div>
+            <p class="color-text"><strong>Color Name:</strong> {{ COLOR_DATA.name }}</p>
+            <p class="color-text"><strong>RGB Values:</strong> {{ COLOR_DATA.rgb }}</p>
+            <p class="color-text"><strong>HEX Code:</strong> {{ COLOR_DATA.hex }}</p>
         </div>
     {% else %}
         <p>No color data available.</p>

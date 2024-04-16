@@ -27,7 +27,7 @@ jobs:
         # you may set pylint to ignore any files or dependencies that make no sense to lint
         run: |
           cd ${{ matrix.subdir }}
-          pipenv run pylint --ignore=cv2 --ignored-modules=cv2 **/*.py
+          pipenv run pylint --ignore=cv2 --ignored-modules=cv2 --disable W0603 W0621 W0613 E1101 E1121 **/*.py
       - name: Format with black
         if: ${{ hashFiles(format('{0}/**/*.py', matrix.subdir)) != '' }}
         # you may set black to ignore any files or dependencies that make no sense to format

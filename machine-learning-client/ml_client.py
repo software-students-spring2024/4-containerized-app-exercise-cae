@@ -1,17 +1,23 @@
+"""
+This module initializes the machine learning client.
+"""
+
+import time
 import cv2
 import numpy as np
 import webcolors
 from pymongo import MongoClient
 import pika
 from bson import ObjectId
-import time
 
 
 def rgb_to_hex(rgb):
-    return "#{:02x}{:02x}{:02x}".format(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+    """This function transfers RBG values to HEX values."""
+    return f"#{int(rgb[0]):02x}{int(rgb[1]):02x}{int(rgb[2]):02x}"
 
 
 def get_color_name(rgb):
+    """This function use webcolors to try to get the name of the color."""
     try:
         return webcolors.rgb_to_name(rgb)
     except ValueError:
@@ -47,6 +53,7 @@ def get_image_data_from_db(document_id):
 
 
 def save_color_data_to_db(channel, color_data):
+    """This function saves the color data to db."""
     # Connect to MongoDB
     mongo_uri = "mongodb://mongodb:27017/"
     # mongo_uri = "mongodb://localhost:27017/"
@@ -69,7 +76,7 @@ def save_color_data_to_db(channel, color_data):
     print("Color data saved to the database")
 
 
-def callback(ch, method, properties, body):
+def callback(channel, method, properties, body):
     """This function is called when a message is received from the queue."""
     document_id = body.decode()  # Decode the byte message to string
     print("Received message:", document_id)
@@ -95,10 +102,11 @@ def callback(ch, method, properties, body):
     }
 
     # Save color data to the database
-    save_color_data_to_db(ch, color_data)
+    save_color_data_to_db(channel, color_data)
 
 
 def establish_connection():
+    """This function starts the RabbitMQ connection with main.py web app."""
     while True:
         try:
             connection = pika.BlockingConnection(
@@ -111,6 +119,7 @@ def establish_connection():
 
 
 def main():
+    """This function establishes connection with RabbitMQ and starts consuming messages."""
     connection = establish_connection()
     channel = connection.channel()
 

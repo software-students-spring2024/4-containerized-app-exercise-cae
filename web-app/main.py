@@ -1,13 +1,14 @@
 """
-This module initializes a Flask application and connects to a MongoDB database.
+This module initializes the main Flask web app.
 """
 
-from flask import Flask, request, jsonify, render_template
 import os
+import logging
+import sys
+from flask import Flask, request, jsonify, render_template
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import pika
-import logging
 from bson import ObjectId
 
 load_dotenv()
@@ -15,17 +16,18 @@ load_dotenv()
 app = Flask(__name__, template_folder="templates")
 app.config["UPLOAD_FOLDER"] = "uploads"
 
-counter = 0
+COUNTER = 0
 
 
 def generate_filename():
-    global counter
-    counter += 1
-    return f"image_{counter}.jpg"
+    """This function generates unique file names for the temporarily stored images."""
+    global COUNTER
+    COUNTER += 1
+    return f"image_{COUNTER}.jpg"
 
 
-# Initialize the MongoDB client
 def get_mongo_client():
+    """This function retrieves mongo client via mongo_uri."""
     mongo_uri = "mongodb://mongodb:27017/"
     # mongo_uri = "mongodb://localhost:27017/"
     if not mongo_uri:
@@ -33,8 +35,8 @@ def get_mongo_client():
     return MongoClient(mongo_uri)
 
 
-# Function to get the database
 def get_db(client):
+    """This function retrieves main database for the program."""
     db_name = "CAE"
     return client[db_name]
 
@@ -48,17 +50,19 @@ try:
     print("Connected to MongoDB successfully.")
 except ConnectionError as e:
     print("Error connecting to MongoDB:", e)
-    exit(1)
+    sys.exit(1)  # Fix for R1722
 
 
 # Define routes and other Flask application logic below
 @app.route("/")
 def home():
+    """This function renders the default index.html home page."""
     return render_template("index.html")
 
 
 @app.route("/capture", methods=["POST"])
 def capture():
+    """This function handles image capture requests."""
     if "image" not in request.files:
         return jsonify({"error": "No image part"}), 400
 
@@ -106,32 +110,32 @@ def capture():
     )
 
 
-color_data = None
+COLOR_DATA = None
 
 
 @app.route("/color_display")
 def color_display():
-    if color_data is None:
-        return render_template("color_display.html", color_data=None)
-    else:
-        return render_template("color_display.html", color_data=color_data)
-
-
-logging.basicConfig(level=logging.DEBUG)
+    """This function renders color_display.html with color data retrieved from database."""
+    return render_template("color_display.html", COLOR_DATA=COLOR_DATA)
 
 
 def save_image_to_db(image_path):
+    """This function saves the image data to the database."""
     try:
         with open(image_path, "rb") as image_file:
             image_data = image_file.read()
         data = {"image_data": image_data}
         result = image_collection.insert_one(data)
         document_id = str(result.inserted_id)
-        logging.debug(f"Image inserted into database with document ID: {document_id}")
-        return str(result.inserted_id)
-    except Exception as e:
-        logging.error(f"Error inserting image into database: {e}")
-        return None
+        logging.debug("Image inserted into database with document ID: %s", document_id)
+        return document_id
+    except FileNotFoundError as file_not_found_error:
+        logging.error(
+            "Error inserting image into db: File not found - %s", file_not_found_error
+        )
+    except IOError as io_error:
+        logging.error("Error inserting image into db: I/O error - %s", io_error)
+    return None
 
 
 def get_color_data_from_db(color_id):
@@ -143,22 +147,22 @@ def get_color_data_from_db(color_id):
         raise EnvironmentError("MONGO_URI environment variable is not set.")
     client = MongoClient(mongo_uri)
     db_client = client["CAE"]
-    color_collection = db_client["Color"]
+    local_color_collection = db_client["Color"]
 
-    document = color_collection.find_one({"_id": ObjectId(color_id)})
+    document = local_color_collection.find_one({"_id": ObjectId(color_id)})
     if document:
         return document
     return None
 
 
-def callback(ch, method, properties, body):
+def callback(channel, method, properties, body):
     """This function is called when a message is received from the queue."""
-    global color_data
     color_id = body.decode()  # Decode the byte message to string
     print("Received message:", color_id)
 
     # Fetch image data from the database
-    color_data = get_color_data_from_db(color_id)
+    global COLOR_DATA
+    COLOR_DATA = get_color_data_from_db(color_id)
 
 
 if __name__ == "__main__":
