@@ -30,11 +30,12 @@ This project is a image main color palette detector web application working with
 ## Instructions
 
 Follow the following steps to run this app:
-1. Fully intall Docker on your local machine
+1. Fully intall Docker and Docker Desktop on your local machine
 2. Open the directory and run the command `docker-compose up --build`
 3. The time that this web app start up will be slightly different between each run, and try to run the web page way too fast will result in errors. Thus, please wait until you see the message `mlclient  | Waiting for messages...` inside your terminal to proceed to the next step.
-4. Access your `localhost:5000:500` web page at `http://172.20.0.5:5000/` in your web browser, if everything was set up correctly then you should see the web page with the title and a button for image capturing.
+4. After you see the message mentioned above, open your Docker Desktop and you shall be able to see all the containers set up and running at the same time. Now click on the link located at the `Port(s)` section of the `webapp` container (it should be something like `http://localhost:<random port number>`) to access the web app in your browser, and if everything was set up correctly then you should see the web page with the title and a button for image capturing. DO NOT FOLLOW THE LINK DISPLAYED IN THE WEBAPP'S LOG, it must be the link mentioned from Docker Desktop's `webapp` container.
 5. Click on the `Capture Image` button to capture an image from your device's available camera, remember to allow the web app to access it when your browser prompts you to give permission.
 6. Wait for a moment, and the web page will redirect you to another page that will show the analyzed main color of your captured image.
+7. If you want to stop the program from running, simply press `Ctrl+C` at the terminal you were running `docker-compose up --build` from.
 
 There is no need for any starter data for this web app to run, so follow the above steps correctly and you should be able to use the web app as intended.
