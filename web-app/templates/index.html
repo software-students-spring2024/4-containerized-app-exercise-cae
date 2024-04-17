@@ -9,11 +9,13 @@
     <div id="status"></div>
     <button id="capture-btn">Capture Image</button>
     <canvas id="canvas" style="display: none;"></canvas>
+    <img id="captured-image" style="display: none;" />
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const statusElement = document.getElementById('status');
             const canvas = document.getElementById('canvas');
             const captureButton = document.getElementById('capture-btn');
+            const capturedImage = document.getElementById('captured-image');
 
             captureButton.addEventListener('click', function() {
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -24,6 +26,8 @@
                     ctx.fillStyle = '#ffffff'; // Fill canvas with white color
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     canvas.toBlob(blob => {
+                        capturedImage.src = URL.createObjectURL(blob);
+                        capturedImage.style.display = 'block';
                         sendData(blob);
                     }, 'image/jpeg');
                     statusElement.innerText = 'Camera not available. Capturing a blank white image instead.';
@@ -41,6 +45,8 @@
                                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                                 video.srcObject.getTracks().forEach(track => track.stop()); // Stop the camera
                                 canvas.toBlob(blob => {
+                                    capturedImage.src = URL.createObjectURL(blob);
+                                    capturedImage.style.display = 'block';
                                     sendData(blob);
                                 }, 'image/jpeg');
                                 statusElement.innerText = 'Image captured.';
