@@ -24,10 +24,12 @@ def test_client():
     yield test_client
 
 
-def test_home(test_client):
-    """This function tests home page access."""
+def test_home_route(test_client):
+    """Test the home route that renders the index.html template."""
     response = test_client.get("/")
-    assert b"Image Capture" in response.data
+    assert response.status_code == 200
+    assert b"Main Color Detector" in response.data
+    assert b"Capture Image" in response.data
 
 
 def test_capture_with_no_image_part():
