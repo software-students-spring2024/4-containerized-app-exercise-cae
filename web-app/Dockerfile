@@ -19,7 +19,7 @@ RUN pip install --upgrade pip && \
 COPY . /app/
 
 # Expose the port on which the Flask app will run
-EXPOSE 5000
+EXPOSE 5001
 
 # Command to run the Flask application
 CMD ["python", "main.py"]

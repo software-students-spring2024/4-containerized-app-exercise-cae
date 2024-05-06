@@ -28,7 +28,7 @@ services:
       dockerfile: Dockerfile
     container_name: webapp
     ports:
-      - "5000"
+      - "5001:5001"
     depends_on:
       - mongodb
       - rabbitmq
